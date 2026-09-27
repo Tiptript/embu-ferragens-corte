@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Ambientes virtuais
+env/
+venv/
+.venv/
+
+# Segredos e Chaves de API
+.env
+.env.*
+.streamlit/secrets.toml
+local.settings.json
+
+# Cache local
+cache_extracao_ia.json
+*.log
+.system_generated/
+
+# OS
+.DS_Store
+Thumbs.db

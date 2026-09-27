@@ -1,20 +1,20 @@
 """
-Módulo de Extração Inteligente de Listas de Peças via Gemini 3.8 Flash.
+Módulo de Extração Inteligente de Listas de Peças via Gemini 3.8 Flash (REST API).
 Capaz de ler:
 - Fotos de listas manuscritas em papel
 - Capturas de tela de conversas do WhatsApp
 - Texto livre colado pelo operador
+Elimina dependências de google-generativeai / protobuf para 100% de compatibilidade na nuvem.
 """
 
 import os
 import json
 import re
 import hashlib
-from typing import Optional, Dict, Any
-import google.generativeai as genai
-from PIL import Image
-import io
+import base64
 import time
+from typing import Optional, Dict, Any
+import requests
 
 CACHE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "cache_extracao_ia.json"))
 
@@ -44,11 +44,19 @@ def calcular_hash_entrada(texto: Optional[str] = None, imagem_bytes: Optional[by
     return hasher.hexdigest()
 
 def get_api_key() -> str:
-    """Busca a chave em variáveis de ambiente ou no local.settings.json"""
+    """Busca a chave em variáveis de ambiente, Streamlit Secrets ou local.settings.json"""
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if key:
         return key
-    
+
+    # Tenta Streamlit Secrets se rodando no Streamlit Cloud
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
+            return st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass
+
     # Tenta ler do Segundo Cerebro
     caminho_settings = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Segundo Cerebro", "local.settings.json"))
     if os.path.exists(caminho_settings):
@@ -116,12 +124,59 @@ Responda EXCLUSIVAMENTE com um JSON válido (sem markdown de código ```json e s
 """
 
 
+def _chamar_gemini_rest(contents_parts: list, api_key: str, models: list = None) -> str:
+    """
+    Chama a API REST oficial do Gemini via requests, eliminando dependências
+    conflitantes de protobuf/google-generativeai.
+    """
+    if models is None:
+        models = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
+
+    ultimo_erro = None
+    for model_name in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": contents_parts
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.1
+            }
+        }
+        for tentativa in range(3):
+            try:
+                resp = requests.post(url, json=payload, timeout=35)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0] and "parts" in candidates[0]["content"]:
+                        parts = candidates[0]["content"]["parts"]
+                        textos = [p["text"] for p in parts if "text" in p]
+                        if textos:
+                            return textos[-1].strip()
+                    raise ValueError(f"Resposta vazia ou inválida do Gemini: {resp.text}")
+                elif resp.status_code in (429, 503):
+                    time.sleep(2.0 * (tentativa + 1))
+                elif resp.status_code == 404:
+                    ultimo_erro = f"Modelo {model_name} indisponível (404)"
+                    break
+                else:
+                    ultimo_erro = f"HTTP {resp.status_code}: {resp.text}"
+                    break
+            except Exception as e:
+                ultimo_erro = str(e)
+                time.sleep(1.5 * (tentativa + 1))
+    raise ValueError(f"Não foi possível extrair com a IA após tentativas: {ultimo_erro}")
+
+
 def extrair_pecas_gemini(texto: Optional[str] = None,
                          imagem_bytes: Optional[bytes] = None,
                          mime_type: str = "image/jpeg",
                          api_key: Optional[str] = None) -> Dict[str, Any]:
     """
-    Chama o Gemini 3.8 Flash para estruturar a lista de peças a partir de texto ou imagem.
+    Chama o Gemini 3.8 Flash via REST para estruturar a lista de peças a partir de texto ou imagem.
     Utiliza Cache SHA-256 para evitar consumo desnecessário de cota do Gemini.
     """
     # 1. Verifica Cache SHA-256
@@ -131,43 +186,24 @@ def extrair_pecas_gemini(texto: Optional[str] = None,
         print(f"[CACHE HIT SHA-256] Resposta recuperada instantaneamente do cache local ({hash_entrada[:10]}...).")
         return cache[hash_entrada]
 
-    # 2. Se não estiver no cache, chama o Gemini com retry e fallback de modelos
+    # 2. Se não estiver no cache, obtém a chave
     key = api_key or get_api_key()
     if not key:
         raise ValueError("Chave de API do Gemini não encontrada! Configure a GEMINI_API_KEY.")
 
-    genai.configure(api_key=key)
-    modelos_disponiveis = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
-
-    contents = [SYSTEM_PROMPT]
+    parts = [{"text": SYSTEM_PROMPT}]
     if texto and texto.strip():
-        contents.append(f"Entrada textual do operador/cliente:\n{texto.strip()}")
+        parts.append({"text": f"Entrada textual do operador/cliente:\n{texto.strip()}"})
     if imagem_bytes:
-        image = Image.open(io.BytesIO(imagem_bytes))
-        contents.append(image)
+        img_b64 = base64.b64encode(imagem_bytes).decode("utf-8")
+        parts.append({
+            "inline_data": {
+                "mime_type": mime_type or "image/jpeg",
+                "data": img_b64
+            }
+        })
 
-    raw_text = None
-    ultimo_erro = None
-
-    for m_name in modelos_disponiveis:
-        for tentativa in range(3):
-            try:
-                model = genai.GenerativeModel(m_name)
-                response = model.generate_content(contents)
-                raw_text = response.text.strip()
-                break
-            except Exception as e:
-                ultimo_erro = e
-                err_str = str(e).lower()
-                if "429" in err_str or "quota" in err_str or "resourceexhausted" in err_str:
-                    time.sleep(2.0 * (tentativa + 1))
-                else:
-                    break
-        if raw_text:
-            break
-
-    if not raw_text:
-        raise ValueError(f"Não foi possível extrair com a IA após tentativas: {ultimo_erro}")
+    raw_text = _chamar_gemini_rest(parts, key)
 
     # Limpa marcações markdown se presentes
     if raw_text.startswith("```"):

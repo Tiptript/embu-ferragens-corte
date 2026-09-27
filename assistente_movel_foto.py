@@ -6,11 +6,9 @@ a IA identifica os componentes e o motor paramétrico calcula a lista de corte e
 
 import json
 import re
+import base64
 from typing import Dict, Any, List, Optional
-import google.generativeai as genai
-from PIL import Image
-import io
-from gemini_extractor import get_api_key, calcular_hash_entrada, _carregar_cache, _salvar_cache
+from gemini_extractor import get_api_key, calcular_hash_entrada, _carregar_cache, _salvar_cache, _chamar_gemini_rest
 
 
 PROMPT_DIAGNOSTICO_MOVEL = """
@@ -50,12 +48,17 @@ def analisar_foto_movel(imagem_bytes: bytes, api_key: Optional[str] = None) -> D
     if not key:
         raise ValueError("Chave de API do Gemini não configurada.")
 
-    genai.configure(api_key=key)
-    model = genai.GenerativeModel("gemini-3.8-flash")
-
-    image = Image.open(io.BytesIO(imagem_bytes))
-    response = model.generate_content([PROMPT_DIAGNOSTICO_MOVEL, image])
-    raw_text = response.text.strip()
+    b64 = base64.b64encode(imagem_bytes).decode("utf-8")
+    parts = [
+        {"text": PROMPT_DIAGNOSTICO_MOVEL},
+        {
+            "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": b64
+            }
+        }
+    ]
+    raw_text = _chamar_gemini_rest(parts, key)
 
     if raw_text.startswith("```"):
         raw_text = re.sub(r"^```[a-zA-Z]*\n", "", raw_text)
