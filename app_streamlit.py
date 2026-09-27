@@ -436,11 +436,11 @@ st.markdown("""
     <div class="store-brand">
         <span class="store-icon">🪵</span>
         <div>
-            <div class="store-title">Embu Ferragens</div>
-            <div class="store-sub">Corte Profissional na Seccionadora • Embu das Artes/SP</div>
+            <div class="store-title">Embu Ferragens e Madeiras</div>
+            <div class="store-sub">Corte na Seccionadora • Rua Augusto de Almeida Batista, 1942 - Embu das Artes</div>
         </div>
     </div>
-    <div class="store-badge">Loja Aberta</div>
+    <div class="store-badge">Loja Física Aberta</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -460,11 +460,12 @@ if config_loja.get("exigir_senha_marceneiro") and not st.session_state.marceneir
     st.stop()
 
 
-tab_pedido, tab_visualizacao, tab_sequencia, tab_checkout = st.tabs([
+tab_pedido, tab_visualizacao, tab_sequencia, tab_checkout, tab_sobre = st.tabs([
     "📋 1. Peças",
     "📐 2. Mapa do Corte",
     "🪚 3. Roteiro Serra",
-    "💳 4. Fechar Pedido"
+    "💳 4. Fechar Pedido",
+    "🏬 5. A Loja Física"
 ])
 
 
@@ -1197,17 +1198,154 @@ with tab_checkout:
         </a>
         """, unsafe_allow_html=True)
 
+
 # ==========================================
-# RODAPÉ: CRÉDITOS DE ENGENHARIA & IA
+# ABA 5: A LOJA FÍSICA & ATENDIMENTO
+# ==========================================
+with tab_sobre:
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; border-radius: 12px; padding: 22px; margin-bottom: 20px;">
+        <h2 style="color: #38bdf8; margin: 0 0 6px 0; font-size: 1.55rem; display: flex; align-items: center; gap: 10px;">
+            🏬 Embu Ferragens e Madeiras
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.98rem; margin: 0; line-height: 1.6;">
+            A sua parceira completa em marcenaria: corte computadorizado de MDF na seccionadora, colagem de fita de borda e balcão completo de ferragens em Embu das Artes e região.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_loja1, col_loja2 = st.columns([1, 1], gap="large")
+
+    with col_loja1:
+        st.markdown("#### 📍 Onde Estamos & Como Chegar")
+        st.markdown("""
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 18px; margin-bottom: 16px;">
+            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 700; margin: 0 0 6px 0;">
+                🏢 Loja Física & Galpão de Corte
+            </p>
+            <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin: 0 0 14px 0;">
+                <b>Endereço:</b> Rua Augusto de Almeida Batista, 1942<br>
+                <b>Bairro:</b> Jardim Vazame<br>
+                <b>Cidade:</b> Embu das Artes - SP<br>
+                <b>CEP:</b> 06826-060
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="https://www.google.com/maps/search/?api=1&query=Rua+Augusto+de+Almeida+Batista+1942+Embu+das+Artes+SP" target="_blank" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                    🗺️ Abrir no Google Maps
+                </a>
+                <a href="https://waze.com/ul?q=Rua+Augusto+de+Almeida+Batista+1942+Embu+das+Artes" target="_blank" style="background: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                    🚗 Navegar pelo Waze
+                </a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### 🕒 Horário de Funcionamento")
+        st.markdown("""
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 18px; margin-bottom: 16px;">
+            <table style="width: 100%; color: #cbd5e1; font-size: 0.92rem; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #1e293b;">
+                    <td style="padding: 8px 0; font-weight: 600;">Segunda a Sexta-feira:</td>
+                    <td style="padding: 8px 0; color: #4ade80; text-align: right; font-weight: 700;">08:00 às 17:30</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #1e293b;">
+                    <td style="padding: 8px 0; font-weight: 600;">Sábado:</td>
+                    <td style="padding: 8px 0; color: #4ade80; text-align: right; font-weight: 700;">08:00 às 12:00</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: 600;">Domingo e Feriados:</td>
+                    <td style="padding: 8px 0; color: #f87171; text-align: right; font-weight: 700;">Fechado</td>
+                </tr>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### 📞 Fale Direto Conosco")
+        st.markdown("""
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 18px;">
+            <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0 0 12px 0;">
+                Dúvidas de medidas, consulta de padrões especiais ou suporte no pedido:
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="https://wa.me/5511952811775?text=Ol%C3%A1%21+Gostaria+de+um+or%C3%A7amento+de+chapas+e+cortes+da+Embu+Ferragens." target="_blank" style="background: #16a34a; color: white; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;">
+                    📲 WhatsApp: (11) 95281-1775
+                </a>
+                <a href="tel:11978057030" style="background: #334155; color: white; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;">
+                    📞 Fixo: (11) 97805-7030
+                </a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_loja2:
+        st.markdown("#### 🪚 Serviços Especializados")
+        st.markdown("""
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 18px; margin-bottom: 16px;">
+            <div style="margin-bottom: 14px;">
+                <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
+                    ✂️ Corte Computadorizado na Seccionadora
+                </div>
+                <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
+                    Cortes precisos no esquadro exato, sem lascas no revestimento e com otimização que aproveita ao máximo cada centímetro da chapa.
+                </div>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
+                    📏 Filetagem & Colagem de Fita de Borda
+                </div>
+                <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
+                    Colagem térmica profissional nas bordas, garantindo proteção contra umidade e estética impecável nos seus móveis.
+                </div>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
+                    🪵 Estoque de MDF, Compensados & Madeiras
+                </div>
+                <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
+                    Branco TX, Madeirados nobres (Carvalho, Freijó, Nogal), Preto e Grafite em espessuras de 6mm, 15mm e 18mm.
+                </div>
+            </div>
+            <div>
+                <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
+                    🔩 Balcão Completo de Ferragens
+                </div>
+                <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
+                    Dobradiças com amortecedor slow-motion, corrediças telescópicas e invisíveis, puxadores perfil de alumínio, parafusos, colas de contato e aramados.
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### 🚚 Região de Atendimento & Entrega")
+        st.markdown("""
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 18px;">
+            <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin: 0 0 10px 0;">
+                Atendemos marceneiros, hobbistas e clientes finais em toda a região:
+            </p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 0.78rem; font-weight: 600;">Embu das Artes</span>
+                <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 0.78rem; font-weight: 600;">Taboão da Serra</span>
+                <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 0.78rem; font-weight: 600;">Itapecerica da Serra</span>
+                <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 0.78rem; font-weight: 600;">Cotia</span>
+                <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 0.78rem; font-weight: 600;">Zona Sul / Grande SP</span>
+            </div>
+            <p style="color: #94a3b8; font-size: 0.84rem; line-height: 1.5; margin: 0;">
+                🚗 <b>Retirada na loja:</b> Carregamento facilitado para carretinhas, pick-ups e furgões.<br>
+                📦 <b>Entrega na obra/marcenaria:</b> Frete sob consulta com motorista parceiro.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ==========================================
+# RODAPÉ: INFORMAÇÕES DA LOJA & CRÉDITOS
 # ==========================================
 st.markdown("---")
 st.markdown(
     """
-    <div style="text-align: center; color: #94a3b8; font-size: 0.82rem; padding: 1.2rem 0; line-height: 1.6;">
-        🪚 <b>Embu Ferragens</b> — Sistema de Otimização & Canal Digital de Vendas de MDF<br>
-        🛠️ <b>Antigravity</b> (Arquiteto & Engenheiro de Execução) &nbsp;|&nbsp;
-        🔍 <b>Claude Fable</b> (Revisor Técnico) &nbsp;|&nbsp;
-        🎯 <b>Gemini</b> (Prompter & Visão Multimodal)
+    <div style="text-align: center; color: #94a3b8; font-size: 0.82rem; padding: 1.2rem 0; line-height: 1.7;">
+        🏬 <b>Embu Ferragens e Madeiras</b> — Rua Augusto de Almeida Batista, 1942, Jd. Vazame, Embu das Artes - SP<br>
+        📞 WhatsApp: (11) 95281-1775 &nbsp;|&nbsp; Fixo: (11) 97805-7030 &nbsp;|&nbsp; 🕒 Seg a Sex: 08:00 às 17:30 • Sáb: 08:00 às 12:00<br>
+        <span style="font-size: 0.75rem; color: #64748b;">Sistema de Otimização de Corte Computadorizado para Seccionadora</span>
     </div>
     """,
     unsafe_allow_html=True
