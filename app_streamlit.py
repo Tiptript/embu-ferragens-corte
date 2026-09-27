@@ -35,9 +35,19 @@ config_loja = carregar_config()
 # Estilização CSS Moderna & Responsiva (Mobile First & PWA-Like)
 st.markdown("""
 <style>
+    /* Ocultar elementos padrão do Streamlit para parecer site profissional (GitHub, Menu, Deploy, Rodapé) */
+    #MainMenu {visibility: hidden !important; display: none !important;}
+    header {visibility: hidden !important; display: none !important;}
+    [data-testid="stHeader"] {visibility: hidden !important; display: none !important;}
+    footer {visibility: hidden !important; display: none !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
+    [data-testid="stDecoration"] {visibility: hidden !important; display: none !important;}
+    [data-testid="stStatusWidget"] {visibility: hidden !important; display: none !important;}
+    .stDeployButton {display: none !important;}
+
     /* Reset de espaçamento superior do Streamlit */
     .block-container {
-        padding-top: 1.2rem !important;
+        padding-top: 0.8rem !important;
         padding-bottom: 2rem !important;
     }
     
