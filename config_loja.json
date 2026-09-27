@@ -1,0 +1,21 @@
+{
+  "admin_senha_hash": "embu2026",
+  "exigir_senha_marceneiro": false,
+  "senha_marceneiro": "PARCEIRO",
+  "whatsapp_loja": "5511952811775",
+  "pix_chave": "123vini.dias@gmail.com",
+  "pix_titular": "VINICIUS DIAS",
+  "pix_cidade": "EMBU DAS ARTES",
+  "precos_mdf_chapa": {
+    "MDF Preto 15mm": 275.0,
+    "MDF Preto 6mm": 165.0,
+    "MDF Branco TX 15mm": 210.0,
+    "MDF Branco TX 18mm": 245.0,
+    "MDF Carvalho Hanover 15mm": 290.0,
+    "MDF Freijó 15mm": 295.0,
+    "MDF Padrão 15mm": 230.0
+  },
+  "preco_corte_por_chapa": 35.0,
+  "preco_fita_metro": 1.5,
+  "frete_motorista_padrao": 50.0
+}

@@ -1,0 +1,218 @@
+{
+  "7ead693cd7d280132609309a734e281fefb0a269d67cb0b29522f56b23974a7e": {
+    "materiais": [
+      {
+        "material": "MDF Padrão 15mm",
+        "pecas": [
+          {
+            "id": "P1",
+            "nome": "Peça 740x540",
+            "comprimento_mm": 740,
+            "largura_mm": 540,
+            "quantidade": 3,
+            "fita_sup": true,
+            "fita_inf": false,
+            "fita_esq": true,
+            "fita_dir": true
+          },
+          {
+            "id": "P2",
+            "nome": "Peça 1030x540",
+            "comprimento_mm": 1030,
+            "largura_mm": 540,
+            "quantidade": 2,
+            "fita_sup": true,
+            "fita_inf": false,
+            "fita_esq": true,
+            "fita_dir": true
+          },
+          {
+            "id": "P3",
+            "nome": "Peça 740x525",
+            "comprimento_mm": 740,
+            "largura_mm": 525,
+            "quantidade": 2,
+            "fita_sup": true,
+            "fita_inf": true,
+            "fita_esq": true,
+            "fita_dir": true
+          },
+          {
+            "id": "P4",
+            "nome": "Peça 740x560",
+            "comprimento_mm": 740,
+            "largura_mm": 560,
+            "quantidade": 2,
+            "fita_sup": true,
+            "fita_inf": false,
+            "fita_esq": true,
+            "fita_dir": true
+          }
+        ]
+      }
+    ]
+  },
+  "59dd077ac1b0581d9d9fc5896b175df1e3dad8098d6e93ad7bff97e140055ef4": {
+    "materiais": [
+      {
+        "material": "MDF Padrão 15mm",
+        "pecas": [
+          {
+            "id": "P1",
+            "nome": "F.interior",
+            "comprimento_mm": 430,
+            "largura_mm": 295,
+            "quantidade": 1,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P2",
+            "nome": "Peça 374x135",
+            "comprimento_mm": 374,
+            "largura_mm": 135,
+            "quantidade": 4,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P3",
+            "nome": "Peça 500x135",
+            "comprimento_mm": 500,
+            "largura_mm": 135,
+            "quantidade": 4,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P4",
+            "nome": "Peça 374x250",
+            "comprimento_mm": 374,
+            "largura_mm": 250,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P5",
+            "nome": "Frente",
+            "comprimento_mm": 430,
+            "largura_mm": 155,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P6",
+            "nome": "Peça 500x250",
+            "comprimento_mm": 500,
+            "largura_mm": 250,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P7",
+            "nome": "Peça 635x500",
+            "comprimento_mm": 635,
+            "largura_mm": 500,
+            "quantidade": 1,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P8",
+            "nome": "Peça 635x470",
+            "comprimento_mm": 635,
+            "largura_mm": 470,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P9",
+            "nome": "Peça 745x150",
+            "comprimento_mm": 745,
+            "largura_mm": 150,
+            "quantidade": 1,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P10",
+            "nome": "Peça 692x145",
+            "comprimento_mm": 692,
+            "largura_mm": 145,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P11",
+            "nome": "Peça 500x145",
+            "comprimento_mm": 500,
+            "largura_mm": 145,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P12",
+            "nome": "Peça 745x165",
+            "comprimento_mm": 745,
+            "largura_mm": 165,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P13",
+            "nome": "Peça 475x110",
+            "comprimento_mm": 475,
+            "largura_mm": 110,
+            "quantidade": 2,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          },
+          {
+            "id": "P14",
+            "nome": "Peça 2750x1850",
+            "comprimento_mm": 2750,
+            "largura_mm": 1850,
+            "quantidade": 1,
+            "fita_sup": false,
+            "fita_inf": false,
+            "fita_esq": false,
+            "fita_dir": false
+          }
+        ]
+      }
+    ]
+  }
+}

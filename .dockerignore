@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.git
+.gitignore
+.vscode
+*.png
+*.jpg
+cache_extracao_ia.json
+teste_visual_plano.png
+teste_visual_plano_v2.png
+teste_scratch.png
