@@ -20,6 +20,7 @@ from gemini_extractor import extrair_pecas_gemini, get_api_key
 from config_gerenciador import carregar_config, salvar_config
 from pix_generator import gerar_pix_brcode, gerar_qrcode_pix_base64
 from gerador_imagem_corte import gerar_imagem_plano_chapa
+from log_gerenciador import registrar_log_pedido, carregar_logs, limpar_logs, exportar_logs_csv
 
 # Configuração da Página
 st.set_page_config(
@@ -281,6 +282,9 @@ if "editor_version" not in st.session_state:
 if "ultima_extracao" not in st.session_state:
     st.session_state.ultima_extracao = None
 
+if "mapa_liberado" not in st.session_state:
+    st.session_state.mapa_liberado = False
+
 
 
 # ==========================================
@@ -347,14 +351,17 @@ if modo == "🔒 Painel da Loja (Admin)":
             st.session_state.is_admin = False
             st.rerun()
 
-        tab_adm_precos, tab_adm_loja, tab_adm_seguranca = st.tabs([
+        tab_adm_precos, tab_adm_loja, tab_adm_seguranca, tab_adm_logs, tab_adm_quest = st.tabs([
             "💰 Preços de MDF e Serviços",
-            "📱 WhatsApp & Chave Pix",
-            "🔐 Senhas e Acesso"
+            "📱 WhatsApp, Pix & Proteção",
+            "🔐 Senhas e Acesso",
+            "📊 Histórico & Logs de Pedidos",
+            "📋 Ficha Técnica (Funcionário)"
         ])
 
         with tab_adm_precos:
-            st.markdown("#### 🪵 Tabela de Preços do MDF (R$ por chapa)")
+            st.markdown("#### 🪵 Tabela Oficial de Preços do MDF (R$ por chapa)")
+            st.caption("Esta é a tabela oficial da loja. Os marceneiros e clientes no modo público NÃO conseguem alterar estes valores.")
             precos_mdf = config_loja.get("precos_mdf_chapa", {})
             df_precos_mdf = pd.DataFrame([
                 {"Material / Espessura": k, "Preço Chapa (R$)": float(v)} for k, v in precos_mdf.items()
@@ -394,23 +401,32 @@ if modo == "🔒 Painel da Loja (Admin)":
             st.markdown("#### 📱 Configurações de Recebimento e Atendimento")
             col_zap, col_pix = st.columns(2)
             with col_zap:
-                zap_input = st.text_input("WhatsApp da Loja (com DDI e DDD, ex: 5511999999999):", value=config_loja.get("whatsapp_loja", "5511999999999"))
+                zap_input = st.text_input("WhatsApp da Loja (com DDI e DDD, ex: 5511999999999):", value=config_loja.get("whatsapp_loja", "5511952811775"))
             with col_pix:
-                pix_chave_input = st.text_input("Chave Pix Oficial da Loja:", value=config_loja.get("pix_chave", "contato@embuferragens.com.br"))
+                pix_chave_input = st.text_input("Chave Pix Oficial da Loja:", value=config_loja.get("pix_chave", "123vini.dias@gmail.com"))
 
             col_pix_nome, col_pix_cid = st.columns(2)
             with col_pix_nome:
-                pix_nome_input = st.text_input("Nome do Titular da Conta Pix (até 25 letras):", value=config_loja.get("pix_titular", "EMBU FERRAGENS"))
+                pix_nome_input = st.text_input("Nome do Titular da Conta Pix (até 25 letras):", value=config_loja.get("pix_titular", "VINICIUS DIAS"))
             with col_pix_cid:
                 pix_cid_input = st.text_input("Cidade da Conta Pix:", value=config_loja.get("pix_cidade", "EMBU DAS ARTES"))
 
-            if st.button("💾 Salvar Dados Comerciais"):
+            st.markdown("---")
+            st.markdown("#### 🛡️ Proteção do Motor de Corte")
+            proteger_motor_cfg = st.checkbox(
+                "🔒 Bloquear Mapa Detalhado e Roteiro da Serra antes do envio ao WhatsApp",
+                value=config_loja.get("proteger_motor_antes_whatsapp", True),
+                help="Quando ativado, o visitante vê as métricas de aproveitamento e chapas, mas a imagem detalhada e a ordem dos cortes só são liberadas após clicar para enviar o pedido no WhatsApp da Embu Ferragens."
+            )
+
+            if st.button("💾 Salvar Dados Comerciais & Proteção"):
                 config_loja["whatsapp_loja"] = zap_input.replace("+", "").replace("-", "").replace(" ", "")
                 config_loja["pix_chave"] = pix_chave_input.strip()
                 config_loja["pix_titular"] = pix_nome_input.strip()
                 config_loja["pix_cidade"] = pix_cid_input.strip()
+                config_loja["proteger_motor_antes_whatsapp"] = proteger_motor_cfg
                 salvar_config(config_loja)
-                st.success("Dados de WhatsApp e Pix salvos com sucesso!")
+                st.success("Configurações comerciais e de proteção salvas com sucesso!")
 
         with tab_adm_seguranca:
             st.markdown("#### 🔐 Controle de Acesso de Marceneiros")
@@ -424,6 +440,82 @@ if modo == "🔒 Painel da Loja (Admin)":
                 config_loja["admin_senha_hash"] = nova_senha_admin
                 salvar_config(config_loja)
                 st.success("Configurações de segurança atualizadas!")
+
+        with tab_adm_logs:
+            st.markdown("#### 📊 Histórico de Pedidos e Telemetria de Visitantes")
+            st.caption("Acompanhe todos os orçamentos, simulações e pedidos realizados, com data, horário, material, valor e localização aproximada.")
+
+            todos_logs = carregar_logs()
+
+            if not todos_logs:
+                st.info("Nenhum pedido ou simulação registrado ainda. Conforme os clientes utilizarem o otimizador, os registros aparecerão aqui em tempo real!")
+            else:
+                total_pedidos = len(todos_logs)
+                faturamento_simulado = sum(float(l.get("valor_total_rs", 0.0)) for l in todos_logs)
+                total_chapas = sum(int(l.get("chapas", 0)) for l in todos_logs)
+                pedidos_zap = sum(1 for l in todos_logs if "WhatsApp" in str(l.get("evento", "")))
+
+                kpi_log1, kpi_log2, kpi_log3, kpi_log4 = st.columns(4)
+                kpi_log1.metric("Simulações / Pedidos", total_pedidos)
+                kpi_log2.metric("Enviados no WhatsApp", pedidos_zap)
+                kpi_log3.metric("Faturamento Potencial", f"R$ {faturamento_simulado:,.2f}")
+                kpi_log4.metric("Chapas Demandadas", f"{total_chapas} un")
+
+                st.markdown("---")
+
+                col_down, col_clear = st.columns([3, 1])
+                with col_down:
+                    csv_data = exportar_logs_csv()
+                    st.download_button(
+                        label="📥 Baixar Relatório Completo em CSV (Excel)",
+                        data=csv_data,
+                        file_name=f"pedidos_embu_ferragens_{int(time.time())}.csv",
+                        mime="text/csv",
+                        type="primary"
+                    )
+                with col_clear:
+                    if st.button("🗑️ Limpar Histórico de Logs"):
+                        limpar_logs()
+                        st.success("Histórico limpo!")
+                        st.rerun()
+
+                df_logs = pd.DataFrame(todos_logs)
+                colunas_exibir = ["id", "data_hora", "evento", "cliente", "material", "chapas", "aproveitamento", "valor_total_rs", "cidade", "dispositivo", "ip"]
+                cols_final = [c for c in colunas_exibir if c in df_logs.columns]
+                st.dataframe(df_logs[cols_final], use_container_width=True, hide_index=True)
+
+        with tab_adm_quest:
+            st.markdown("#### 📋 Questionário de Calibração Técnica da Loja")
+            st.caption("Copie este questionário e envie no WhatsApp do funcionário da loja para calibrar estoque, preços reais e serra seccionadora.")
+
+            texto_quest = (
+                "📋 QUESTIONÁRIO TÉCNICO PARA O FUNCIONÁRIO — EMBU FERRAGENS\n\n"
+                "1. CHAPAS DE MDF E ESTOQUE\n"
+                "• Dimensões das chapas mais usadas: 2750 x 1850 mm ou 2750 x 1830 mm?\n"
+                "• Preços de venda ao marceneiro dos MDFs em estoque:\n"
+                "  - Branco TX 15mm: R$ _____\n"
+                "  - Branco TX 18mm: R$ _____\n"
+                "  - Branco TX 6mm (fundo): R$ _____\n"
+                "  - Preto TX 15mm / 6mm: R$ _____\n"
+                "  - Madeirados (Freijó, Carvalho, Nogal): R$ _____\n"
+                "  - Compensados (se vender): R$ _____\n\n"
+                "2. CONFIGURAÇÕES DA SECCIONADORA\n"
+                "• Marca e modelo da máquina: ____________________\n"
+                "• Espessura da lâmina da serra principal (Kerf): 3.2mm, 4.0mm ou 4.2mm?\n"
+                "• Refilo de esquadro nas bordas da chapa: 0mm, 5mm ou 10mm por lado?\n"
+                "• Sentido do 1º corte da serra: Longitudinal (no comprimento de 2,75m) ou Transversal (na largura)?\n"
+                "• Retalho mínimo que a loja guarda ou devolve para o cliente: _____ x _____ mm\n\n"
+                "3. SERVIÇOS E FITA DE BORDA\n"
+                "• Preço do corte na seccionadora: R$ _____ por chapa cortada\n"
+                "• Preço da colagem/filetagem de fita de borda: R$ _____ por metro linear\n"
+                "• Espessuras de fita disponíveis: Fita fina 0.45mm ou Grossa 1.0mm / 2.0mm?\n\n"
+                "4. FRETE E ENTREGAS\n"
+                "• Valor do frete padrão em Embu das Artes: R$ _____\n"
+                "• Valor para cidades vizinhas (Taboão, Itapecerica, Cotia): R$ _____\n\n"
+                "5. CASOS REAIS PARA COMPARAR APROVEITAMENTO\n"
+                "• Por favor, envie a lista de 2 ou 3 pedidos de corte reais feitos recentemente para rodarmos no novo motor e compararmos com o software atual!"
+            )
+            st.text_area("Texto formatado para envio no WhatsApp:", value=texto_quest, height=380)
 
     st.stop()
 
@@ -812,6 +904,32 @@ if btn_calcular:
                         "fita_metros": fita_metros_total,
                         "material": st.session_state.material_selecionado
                     }
+                    st.session_state.mapa_liberado = False
+
+                    # Telemetria: Registra a simulação de corte para o administrador
+                    try:
+                        mat_nome_log = st.session_state.material_selecionado
+                        preco_unit_ch_log = float(config_loja.get("precos_mdf_chapa", {}).get(mat_nome_log, 230.0))
+                        taxa_corte_log = float(config_loja.get("preco_corte_por_chapa", 35.0))
+                        taxa_fita_log = float(config_loja.get("preco_fita_metro", 1.50))
+                        v_tot_log = (preco_unit_ch_log + taxa_corte_log) * len(resultado_chapas) + (taxa_fita_log * fita_metros_total)
+                        area_nom_tot = len(resultado_chapas) * chapa_w * chapa_h
+                        aprov_pct_num = (sum(sum(p['w'] * p['h'] for p in ch['pecas']) for ch in resultado_chapas) / area_nom_tot * 100) if area_nom_tot > 0 else 0.0
+
+                        registrar_log_pedido("Simulação de Corte", {
+                            "cliente": "Marceneiro (Simulação)",
+                            "material": mat_nome_log,
+                            "chapas": len(resultado_chapas),
+                            "aproveitamento": f"{aprov_pct_num:.1f}%",
+                            "total_pecas": len(pieces_list),
+                            "metros_fita": fita_metros_total,
+                            "valor_total_rs": v_tot_log,
+                            "logistica": "Balcão / Simulação",
+                            "pecas_resumo": f"{len(edited_df)} modelos ({len(pieces_list)} peças totais)"
+                        })
+                    except Exception as e_log:
+                        print(f"Erro ao registrar telemetria: {e_log}")
+
                     st.success(f"🎉 Plano otimizado em {dt_ms} ms! {len(resultado_chapas)} chapa(s) de {st.session_state.material_selecionado}.")
                 else:
                     st.error("Não foi possível gerar um plano válido com essas dimensões. Verifique se as peças cabem dentro da chapa.")
@@ -876,39 +994,56 @@ with tab_visualizacao:
 </div>"""
         st.markdown(html_kpi, unsafe_allow_html=True)
 
-        cores = ["#38bdf8", "#fbbf24", "#34d399", "#f472b6", "#a78bfa", "#f87171", "#fb923c", "#2dd4bf"]
+        bloqueado_motor = config_loja.get("proteger_motor_antes_whatsapp", True) and not st.session_state.get("mapa_liberado", False) and not st.session_state.get("is_admin", False)
 
-        for ch_idx, ch in enumerate(chapas):
-            locais = [{'x': p['x'], 'y': p['y'], 'w': p['w'], 'h': p['h']} for p in ch['pecas']]
-            maximais = retangulos_maximais(locais, W, H)
-            visiveis = selecionar_sem_sobreposicao(maximais, retalho_minimo)
-            area_ch = sum(p['w'] * p['h'] for p in ch['pecas'])
-            aprov_ch = (area_ch / (res["chapa_w"] * res["chapa_h"])) * 100.0
-            maior_ret = max(visiveis, key=lambda r: r['w'] * r['h']) if visiveis else None
+        if bloqueado_motor:
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #3b82f6; border-radius: 12px; padding: 26px; text-align: center; margin: 20px 0;">
+                <div style="font-size: 2.8rem; margin-bottom: 8px;">🔒</div>
+                <h3 style="color: #38bdf8; margin: 0 0 10px 0; font-size: 1.35rem;">Desenho Técnico e Mapa de Corte Protegidos</h3>
+                <p style="color: #cbd5e1; font-size: 0.96rem; max-width: 640px; margin: 0 auto 16px auto; line-height: 1.6;">
+                    O cálculo das suas peças foi realizado com alta precisão (aproveitamento exibido nos cards acima).<br>
+                    Para proteger o algoritmo e a tecnologia da <b>Embu Ferragens</b>, o desenho gráfico das chapas e os botões de download são liberados após o fechamento do pedido.
+                </p>
+                <div style="background: #0f172a; border-radius: 8px; padding: 12px 16px; display: inline-block; color: #94a3b8; font-size: 0.9rem;">
+                    💡 Acesse a <b>Aba 4 (💳 Fechar Pedido)</b> para confirmar o envio no WhatsApp oficial da loja e desbloquear seus mapas imediatamente!
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            cores = ["#38bdf8", "#fbbf24", "#34d399", "#f472b6", "#a78bfa", "#f87171", "#fb923c", "#2dd4bf"]
 
-            st.markdown(f"### 📦 Chapa #{ch_idx + 1} — {res['material']} ({res['chapa_w']} x {res['chapa_h']} mm)")
-            if maior_ret:
-                st.caption(f"Aproveitamento: **{aprov_ch:.1f}%** | Maior Sobra Limpa: **{maior_ret['w']} x {maior_ret['h']} mm** ({maior_ret['w']*maior_ret['h']/1_000_000:.3f} m²)")
+            for ch_idx, ch in enumerate(chapas):
+                locais = [{'x': p['x'], 'y': p['y'], 'w': p['w'], 'h': p['h']} for p in ch['pecas']]
+                maximais = retangulos_maximais(locais, W, H)
+                visiveis = selecionar_sem_sobreposicao(maximais, retalho_minimo)
+                area_ch = sum(p['w'] * p['h'] for p in ch['pecas'])
+                aprov_ch = (area_ch / (res["chapa_w"] * res["chapa_h"])) * 100.0
+                maior_ret = max(visiveis, key=lambda r: r['w'] * r['h']) if visiveis else None
 
-            cortes_tab2 = sequencia_cortes(ch.get("faixas", []), res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
-            png_ch_tab2 = gerar_imagem_plano_chapa(
-                ch, res["chapa_w"], res["chapa_h"],
-                refilo=res["refilo"],
-                kerf=res["kerf"],
-                chapa_idx=ch_idx + 1,
-                total_chapas=len(chapas),
-                material_nome=res["material"],
-                sequencia_cortes_list=cortes_tab2
-            )
-            st.image(png_ch_tab2, caption=f"Mapa Oficial do Corte — Chapa #{ch_idx + 1} ({res['material']})", use_container_width=True)
-            st.download_button(
-                label=f"📥 Baixar Imagem Oficial do Plano (Chapa #{ch_idx + 1})",
-                data=png_ch_tab2,
-                file_name=f"plano_corte_chapa_{ch_idx + 1}.png",
-                mime="image/png",
-                key=f"dl_tab2_{ch_idx + 1}"
-            )
-            st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown(f"### 📦 Chapa #{ch_idx + 1} — {res['material']} ({res['chapa_w']} x {res['chapa_h']} mm)")
+                if maior_ret:
+                    st.caption(f"Aproveitamento: **{aprov_ch:.1f}%** | Maior Sobra Limpa: **{maior_ret['w']} x {maior_ret['h']} mm** ({maior_ret['w']*maior_ret['h']/1_000_000:.3f} m²)")
+
+                cortes_tab2 = sequencia_cortes(ch.get("faixas", []), res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
+                png_ch_tab2 = gerar_imagem_plano_chapa(
+                    ch, res["chapa_w"], res["chapa_h"],
+                    refilo=res["refilo"],
+                    kerf=res["kerf"],
+                    chapa_idx=ch_idx + 1,
+                    total_chapas=len(chapas),
+                    material_nome=res["material"],
+                    sequencia_cortes_list=cortes_tab2
+                )
+                st.image(png_ch_tab2, caption=f"Mapa Oficial do Corte — Chapa #{ch_idx + 1} ({res['material']})", use_container_width=True)
+                st.download_button(
+                    label=f"📥 Baixar Imagem Oficial do Plano (Chapa #{ch_idx + 1})",
+                    data=png_ch_tab2,
+                    file_name=f"plano_corte_chapa_{ch_idx + 1}.png",
+                    mime="image/png",
+                    key=f"dl_tab2_{ch_idx + 1}"
+                )
+                st.markdown("<br>", unsafe_allow_html=True)
 
 
 
@@ -920,30 +1055,45 @@ with tab_sequencia:
     if not res:
         st.info("💡 Calcule o plano de corte na Aba 1 para gerar a sequência da máquina.")
     else:
-        st.markdown("### 🪚 Sequência de Cortes de 2 Estágios (Para a Serra)")
-        for ch_idx, ch in enumerate(res["chapas"]):
-            st.markdown(f"#### 🏷️ Chapa #{ch_idx + 1}")
-            faixas = ch.get("faixas", [])
-            cortes = sequencia_cortes(faixas, res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
+        bloqueado_motor = config_loja.get("proteger_motor_antes_whatsapp", True) and not st.session_state.get("mapa_liberado", False) and not st.session_state.get("is_admin", False)
+        if bloqueado_motor:
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #3b82f6; border-radius: 12px; padding: 26px; text-align: center; margin: 20px 0;">
+                <div style="font-size: 2.8rem; margin-bottom: 8px;">🪚</div>
+                <h3 style="color: #38bdf8; margin: 0 0 10px 0; font-size: 1.35rem;">Roteiro da Seccionadora Protegido</h3>
+                <p style="color: #cbd5e1; font-size: 0.96rem; max-width: 640px; margin: 0 auto 16px auto; line-height: 1.6;">
+                    A sequência técnica de cortes de 2 estágios (tiras longitudinais e destopos) para o operador da máquina é liberada após a confirmação do pedido no WhatsApp oficial.
+                </p>
+                <div style="background: #0f172a; border-radius: 8px; padding: 12px 16px; display: inline-block; color: #94a3b8; font-size: 0.9rem;">
+                    💡 Acesse a <b>Aba 4 (💳 Fechar Pedido)</b> para enviar seu pedido e desbloquear a sequência completa de cortes.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("### 🪚 Sequência de Cortes de 2 Estágios (Para a Serra)")
+            for ch_idx, ch in enumerate(res["chapas"]):
+                st.markdown(f"#### 🏷️ Chapa #{ch_idx + 1}")
+                faixas = ch.get("faixas", [])
+                cortes = sequencia_cortes(faixas, res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
 
-            c1 = [c for c in cortes if c.get("estagio") == 1]
-            c2 = [c for c in cortes if c.get("estagio") == 2]
+                c1 = [c for c in cortes if c.get("estagio") == 1]
+                c2 = [c for c in cortes if c.get("estagio") == 2]
 
-            col_f1, col_f2 = st.columns(2)
-            with col_f1:
-                st.markdown("**Fase 1: Tiras de Ponta a Ponta**")
-                for c in c1:
-                    if c["y1"] == c["y2"]:
-                        st.write(f"• Passo {c['ordem']}: Cortar horizontal em **Y = {c['y1']} mm**")
-                    else:
-                        st.write(f"• Passo {c['ordem']}: Cortar vertical em **X = {c['x1']} mm**")
-            with col_f2:
-                st.markdown("**Fase 2: Destopo nas Tiras**")
-                for c in c2:
-                    if c["x1"] == c["x2"]:
-                        st.write(f"• Passo {c['ordem']}: Destopar em **X = {c['x1']} mm** (faixa Y={c['y1']} a {c['y2']})")
-                    else:
-                        st.write(f"• Passo {c['ordem']}: Destopar em **Y = {c['y1']} mm** (faixa X={c['x1']} a {c['x2']})")
+                col_f1, col_f2 = st.columns(2)
+                with col_f1:
+                    st.markdown("**Fase 1: Tiras de Ponta a Ponta**")
+                    for c in c1:
+                        if c["y1"] == c["y2"]:
+                            st.write(f"• Passo {c['ordem']}: Cortar horizontal em **Y = {c['y1']} mm**")
+                        else:
+                            st.write(f"• Passo {c['ordem']}: Cortar vertical em **X = {c['x1']} mm**")
+                with col_f2:
+                    st.markdown("**Fase 2: Destopo nas Tiras**")
+                    for c in c2:
+                        if c["x1"] == c["x2"]:
+                            st.write(f"• Passo {c['ordem']}: Destopar em **X = {c['x1']} mm** (faixa Y={c['y1']} a {c['y2']})")
+                        else:
+                            st.write(f"• Passo {c['ordem']}: Destopar em **Y = {c['y1']} mm** (faixa X={c['x1']} a {c['x2']})")
 
 
 # =========================================================================
@@ -1076,51 +1226,77 @@ with tab_checkout:
         # ----------------------------------------------------
         # 2. SEÇÃO DE IMAGENS DO PLANO DE CORTE PARA WHATSAPP
         # ----------------------------------------------------
-        st.markdown("---")
-        st.markdown("### 🖼️ 2. Imagem do Plano de Corte para a Oficina")
-        st.caption("Esta imagem traz o desenho oficial da chapa com medidas, sobras e sequência guilhotinada para o operador da serra:")
-
-        col_imgs = st.columns(len(res["chapas"])) if len(res["chapas"]) <= 3 else [st.container()]
-        chapas_pngs = []
-
+        cortes_todas_chapas = []
         for ch_idx, ch in enumerate(res["chapas"]):
             cortes_ch = sequencia_cortes(ch.get("faixas", []), res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
-            png_bytes = gerar_imagem_plano_chapa(
-                ch, res["chapa_w"], res["chapa_h"],
-                refilo=res["refilo"],
-                kerf=res["kerf"],
-                chapa_idx=ch_idx + 1,
-                total_chapas=len(res["chapas"]),
-                material_nome=res["material"],
-                sequencia_cortes_list=cortes_ch
-            )
-            chapas_pngs.append((ch_idx + 1, png_bytes, cortes_ch))
+            cortes_todas_chapas.append((ch_idx + 1, ch, cortes_ch))
 
-            alvo_col = col_imgs[ch_idx] if len(res["chapas"]) <= 3 else st
-            with alvo_col:
-                st.image(png_bytes, caption=f"Chapa #{ch_idx + 1} ({res['chapa_w']}x{res['chapa_h']} mm)", use_container_width=True)
-                st.download_button(
-                    label=f"📥 BAIXAR IMAGEM DO PLANO (Chapa #{ch_idx + 1})",
-                    data=png_bytes,
-                    file_name=f"plano_corte_chapa_{ch_idx + 1}.png",
-                    mime="image/png",
-                    type="primary",
-                    key=f"dl_chapa_{ch_idx + 1}"
+        bloqueado_motor = config_loja.get("proteger_motor_antes_whatsapp", True) and not st.session_state.get("mapa_liberado", False) and not st.session_state.get("is_admin", False)
+
+        st.markdown("---")
+        if bloqueado_motor:
+            st.markdown("### 🖼️ 2. Mapas de Corte e Desenhos Técnicos")
+            st.markdown("""
+            <div style="background: #1e293b; border: 1px solid #3b82f6; border-radius: 10px; padding: 18px; margin: 12px 0;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <span style="font-size: 2.2rem;">🔒</span>
+                    <div>
+                        <h4 style="color: #38bdf8; margin: 0 0 4px 0;">Imagens em Alta Resolução Protegidas</h4>
+                        <p style="color: #cbd5e1; font-size: 0.92rem; margin: 0; line-height: 1.5;">
+                            Os desenhos técnicos milimétricos e os botões de download de cada chapa serão desbloqueados automaticamente assim que você confirmar o envio para o WhatsApp da Loja abaixo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("### 🖼️ 2. Imagem do Plano de Corte para a Oficina")
+            st.caption("Esta imagem traz o desenho oficial da chapa com medidas, sobras e sequência guilhotinada para o operador da serra:")
+
+            col_imgs = st.columns(len(res["chapas"])) if len(res["chapas"]) <= 3 else [st.container()]
+            for ch_idx, ch, cortes_ch in cortes_todas_chapas:
+                png_bytes = gerar_imagem_plano_chapa(
+                    ch, res["chapa_w"], res["chapa_h"],
+                    refilo=res["refilo"],
+                    kerf=res["kerf"],
+                    chapa_idx=ch_idx,
+                    total_chapas=len(res["chapas"]),
+                    material_nome=res["material"],
+                    sequencia_cortes_list=cortes_ch
                 )
+                alvo_col = col_imgs[ch_idx - 1] if len(res["chapas"]) <= 3 else st
+                with alvo_col:
+                    st.image(png_bytes, caption=f"Chapa #{ch_idx} ({res['chapa_w']}x{res['chapa_h']} mm)", use_container_width=True)
+                    st.download_button(
+                        label=f"📥 BAIXAR IMAGEM DO PLANO (Chapa #{ch_idx})",
+                        data=png_bytes,
+                        file_name=f"plano_corte_chapa_{ch_idx}.png",
+                        mime="image/png",
+                        type="primary",
+                        key=f"dl_chapa_{ch_idx}"
+                    )
 
         # ----------------------------------------------------
         # 3. SEÇÃO DE ENVIO NO WHATSAPP COM TEXTO COMPLETO
         # ----------------------------------------------------
         st.markdown("---")
         st.markdown("### 📲 3. Enviar Pedido no WhatsApp da Loja")
-        
-        col_zap_cfg1, col_zap_cfg2 = st.columns([1, 1])
-        with col_zap_cfg1:
-            whatsapp_destino = st.text_input(
-                "Número de WhatsApp de Destino (com DDD):",
-                value=config_loja.get("whatsapp_loja", "5511952811775"),
-                help="Você pode alterar este número para enviar para um atendente ou vendedor específico da loja."
-            )
+
+        whatsapp_loja_raw = str(config_loja.get("whatsapp_loja", "5511952811775")).replace("+", "").replace("-", "").replace(" ", "").strip()
+        if not whatsapp_loja_raw:
+            whatsapp_loja_raw = "5511952811775"
+        if not whatsapp_loja_raw.startswith("55"):
+            whatsapp_loja_raw = "55" + whatsapp_loja_raw
+
+        st.markdown(f"""
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <span style="color: #94a3b8; font-size: 0.85rem;">Canal Oficial de Atendimento & Produção:</span>
+                <div style="color: #38bdf8; font-weight: 700; font-size: 1.05rem;">📱 WhatsApp da Embu Ferragens: +55 (11) 95281-1775</div>
+            </div>
+            <span style="background: #14532d; color: #4ade80; border: 1px solid #22c55e; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">🔒 Destino Oficial Travado</span>
+        </div>
+        """, unsafe_allow_html=True)
 
         logistica_txt = "Retirada no Balcão da Loja" if "Retirar" in opcao_logistica else f"Entrega pelo Motorista: {endereco_entrega}"
         marceneiro_nome_txt = nome_marceneiro.strip() or "Marceneiro Parceiro"
@@ -1134,7 +1310,7 @@ with tab_checkout:
 
         # 2. Ordem exata dos cortes para a seccionadora
         linhas_cortes = []
-        for ch_idx, png_bytes, cortes_ch in chapas_pngs:
+        for ch_idx, ch, cortes_ch in cortes_todas_chapas:
             linhas_cortes.append(f"\n*CHAPA #{ch_idx} ({res['chapa_w']}x{res['chapa_h']} mm):*")
             c1 = [c for c in cortes_ch if c.get("estagio") == 1]
             c2 = [c for c in cortes_ch if c.get("estagio") == 2]
@@ -1172,31 +1348,51 @@ with tab_checkout:
             f"🖼️ *IMAGEM DO PLANO:* Segue em anexo a imagem do mapa do corte para a serra!"
         )
 
-        # Formata número para link wa.me
-        numero_limpo = "".join(filter(str.isdigit, str(whatsapp_destino)))
-        if numero_limpo and not numero_limpo.startswith("55"):
-            numero_limpo = "55" + numero_limpo
-        if not numero_limpo:
-            numero_limpo = "5511952811775"
+        link_zap = f"https://wa.me/{whatsapp_loja_raw}?text={urllib.parse.quote(msg_zap)}"
 
-        link_zap = f"https://wa.me/{numero_limpo}?text={urllib.parse.quote(msg_zap)}"
+        if bloqueado_motor:
+            st.markdown("""
+            <div style="background: #14532d; border: 1px solid #22c55e; border-radius: 8px; padding: 14px 18px; margin: 12px 0;">
+                <span style="color: #bbf7d0; font-size: 0.95rem; line-height: 1.6;">
+                    💡 <b>Como finalizar o pedido em 2 etapas:</b><br>
+                    1. Clique no botão azul <b>📲 1. Confirmar Pedido & Liberar Mapas</b> abaixo.<br>
+                    2. Em seguida, clique no botão verde <b>📲 ABRIR CONVERSA NO WHATSAPP DA LOJA</b> para despachar seu pedido e anexar o comprovante Pix!
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <div style="background: #14532d; border: 1px solid #22c55e; border-radius: 8px; padding: 14px 18px; margin: 12px 0;">
-            <span style="color: #bbf7d0; font-size: 0.95rem; line-height: 1.6;">
-                💡 <b>Como finalizar o pedido em 3 passos:</b><br>
-                1. Clique no botão azul <b>📥 BAIXAR IMAGEM DO PLANO</b> logo acima para salvar o desenho do corte.<br>
-                2. Clique no botão verde abaixo para <b>abrir o WhatsApp da Loja</b> com todo o pedido e ordem de cortes já digitados.<br>
-                3. Na conversa que se abrir, <b>anexe a imagem do plano de corte</b> e o <b>print do comprovante do Pix</b>!
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
+            if st.button("📲 1. Confirmar Pedido & Liberar Mapas de Corte", type="primary", use_container_width=True):
+                st.session_state.mapa_liberado = True
+                registrar_log_pedido("Disparo WhatsApp", {
+                    "cliente": marceneiro_nome_txt,
+                    "material": mat_nome,
+                    "chapas": qtd_chapas,
+                    "aproveitamento": f"{res.get('aproveitamento_global', 0.0):.1f}%",
+                    "total_pecas": res["total_pecas"],
+                    "metros_fita": fita_metros,
+                    "valor_total_rs": valor_final_pedido,
+                    "logistica": logistica_txt,
+                    "pecas_resumo": f"{len(edited_df)} modelos ({res['total_pecas']} peças) | Pix: {pix_pago_check}"
+                })
+                st.success("🎉 Pedido confirmado e mapas liberados com sucesso!")
+                st.rerun()
+        else:
+            st.markdown("""
+            <div style="background: #14532d; border: 1px solid #22c55e; border-radius: 8px; padding: 14px 18px; margin: 12px 0;">
+                <span style="color: #bbf7d0; font-size: 0.95rem; line-height: 1.6;">
+                    💡 <b>Como enviar o pedido no WhatsApp:</b><br>
+                    1. Baixe as imagens do corte logo acima (ou na <b>Aba 2</b>) para anexar na conversa.<br>
+                    2. Clique no botão verde abaixo para <b>abrir o WhatsApp oficial da Embu Ferragens</b> com toda a lista de peças e ordem de serra já preenchida.<br>
+                    3. Na conversa que se abrir, anexe o comprovante Pix e as imagens do plano!
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <a href="{link_zap}" target="_blank" class="btn-whatsapp">
-            📲 ENVIAR PEDIDO NO WHATSAPP DA LOJA
-        </a>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <a href="{link_zap}" target="_blank" class="btn-whatsapp">
+                📲 ENVIAR PEDIDO NO WHATSAPP DA LOJA
+            </a>
+            """, unsafe_allow_html=True)
 
 
 # ==========================================

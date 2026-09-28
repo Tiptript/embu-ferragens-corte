@@ -2,6 +2,7 @@
   "admin_senha_hash": "embu2026",
   "exigir_senha_marceneiro": false,
   "senha_marceneiro": "PARCEIRO",
+  "proteger_motor_antes_whatsapp": true,
   "whatsapp_loja": "5511952811775",
   "pix_chave": "123vini.dias@gmail.com",
   "pix_titular": "VINICIUS DIAS",
