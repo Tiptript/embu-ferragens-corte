@@ -96,15 +96,15 @@ REGRAS OBRIGATÓRIAS DE CONVERSÃO E NORMALIZAÇÃO:
      Preencha os booleanos fita_sup, fita_inf, fita_esq, fita_dir. Caso não haja menção, padrão é false.
 
 5. SEPARAÇÃO DE MATERIAIS:
-   - Agrupe por material/espessura (ex: 'MDF Preto 15mm', 'MDF Preto 6mm', 'MDF Branco TX 18mm').
-   - Se nenhum material for informado, use 'MDF Padrão 15mm'.
+   - Agrupe por material/espessura (ex: 'MDF Branco TX 15mm', 'MDF Branco TX 18mm', 'MDF Branco TX 6mm (Fundo)').
+   - Se nenhum material for informado, use 'MDF Branco TX 15mm'.
 
 FORMATO DA RESPOSTA:
 Responda EXCLUSIVAMENTE com um JSON válido (sem markdown de código ```json e sem texto antes ou depois):
 {
   "materiais": [
     {
-      "material": "MDF Preto 15mm",
+      "material": "MDF Branco TX 15mm",
       "pecas": [
         {
           "id": "P1",

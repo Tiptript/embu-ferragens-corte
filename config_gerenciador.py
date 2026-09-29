@@ -13,22 +13,26 @@ CONFIG_PADRAO = {
     "admin_senha_hash": "embu2026",
     "exigir_senha_marceneiro": False,
     "senha_marceneiro": "PARCEIRO",
-    "whatsapp_loja": "5511999999999",
+    "proteger_motor_antes_whatsapp": True,
+    "whatsapp_loja": "5511952811775",
     "pix_chave": "123vini.dias@gmail.com",
     "pix_titular": "VINICIUS DIAS",
     "pix_cidade": "EMBU DAS ARTES",
     "precos_mdf_chapa": {
-        "MDF Preto 15mm": 275.00,
-        "MDF Preto 6mm": 165.00,
-        "MDF Branco TX 15mm": 210.00,
-        "MDF Branco TX 18mm": 245.00,
-        "MDF Carvalho Hanover 15mm": 290.00,
-        "MDF Freijó 15mm": 295.00,
-        "MDF Padrão 15mm": 230.00
+        "MDF Branco TX 15mm": 238.00,
+        "MDF Branco TX 18mm": 310.00,
+        "MDF Branco TX 6mm (Fundo)": 190.00
     },
+    "modo_cobranca_corte": "por_corte",
+    "preco_por_corte": 4.00,
     "preco_corte_por_chapa": 35.00,
-    "preco_fita_metro": 1.50,
-    "frete_motorista_padrao": 50.00
+    "preco_fita_metro": 4.00,
+    "tipo_fita_padrao": "Fita fina 0.40mm Branco TX",
+    "frete_motorista_padrao": 30.00,
+    "seccionadora_modelo": "Tecmatic FIT 2.9",
+    "kerf_padrao": 4.0,
+    "refilo_padrao": 10.0,
+    "sentido_corte_padrao": "comprimento"
 }
 
 

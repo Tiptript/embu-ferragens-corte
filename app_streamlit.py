@@ -268,7 +268,7 @@ if "resultado_corte" not in st.session_state:
     st.session_state.resultado_corte = None
 
 if "material_selecionado" not in st.session_state:
-    st.session_state.material_selecionado = "MDF Preto 15mm"
+    st.session_state.material_selecionado = "MDF Branco TX 15mm"
 
 if "is_admin" not in st.session_state:
     st.session_state.is_admin = False
@@ -321,10 +321,22 @@ with st.sidebar:
         chapa_w = col_w.number_input("Comprimento (mm)", value=2750, step=50)
         chapa_h = col_h.number_input("Largura (mm)", value=1850, step=50)
 
-    kerf = st.number_input("Espessura da Serra (Kerf mm)", min_value=1.0, max_value=8.0, value=4.0, step=0.5)
-    refilo = st.number_input("Refilo de Borda (mm por lado)", min_value=0, max_value=50, value=0, step=5)
-    permite_rotacao = st.checkbox("Permitir Rotação de Peças", value=False, help="Mantenha desmarcado para respeitar o veio da madeira.")
+    kerf_padrao = float(config_loja.get("kerf_padrao", 4.0))
+    refilo_padrao = int(config_loja.get("refilo_padrao", 10))
+
+    kerf = st.number_input("Espessura da Serra (Kerf mm)", min_value=1.0, max_value=8.0, value=kerf_padrao, step=0.5, help="Lâmina de 4.0mm da seccionadora Tecmatic FIT 2.9")
+    refilo = st.number_input("Refilo de Borda (mm por lado)", min_value=0, max_value=50, value=refilo_padrao, step=5, help="10mm por lado para esquadro e limpeza das bordas")
+    permite_rotacao = st.checkbox("Permitir Rotação de Peças", value=True, help="Ativo para MDF Branco TX (sem veio direcional), maximizando o aproveitamento da chapa.")
     retalho_minimo = st.number_input("Retalho Mínimo Útil (mm)", value=125, step=25)
+
+    st.markdown("""
+    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 0.8rem; color: #94a3b8;">
+        ⚙️ <b>Oficina Calibrada:</b><br>
+        • Seccionadora: <b>Tecmatic FIT 2.9</b><br>
+        • Serra: <b>4.0 mm</b> | Refilo: <b>10 mm</b><br>
+        • 1º Corte: <b>Longitudinal (2,75m)</b>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # =========================================================================
@@ -368,34 +380,60 @@ if modo == "🔒 Painel da Loja (Admin)":
             ])
             edited_precos_df = st.data_editor(df_precos_mdf, num_rows="dynamic", use_container_width=True)
 
-            col_serv1, col_serv2, col_serv3 = st.columns(3)
-            with col_serv1:
-                preco_corte = st.number_input(
-                    "Taxa de Corte na Seccionadora (R$ por chapa)",
-                    value=float(config_loja.get("preco_corte_por_chapa", 35.0)),
-                    step=5.0
+            st.markdown("#### 🪚 Serviços de Corte, Fita de Borda e Frete")
+            col_modo1, col_modo2 = st.columns([1, 1])
+            with col_modo1:
+                modo_corte_sel = st.radio(
+                    "Modalidade de Cobrança do Corte:",
+                    [
+                        "R$ por Corte na Serra (Passada de Lâmina) — Modelo Real da Oficina",
+                        "R$ Fixo por Chapa de MDF Cortada"
+                    ],
+                    index=0 if config_loja.get("modo_cobranca_corte", "por_corte") == "por_corte" else 1
                 )
+            with col_modo2:
+                if "por Corte" in modo_corte_sel:
+                    preco_corte_val = st.number_input(
+                        "Preço por Corte na Seccionadora (R$ / passada de serra)",
+                        value=float(config_loja.get("preco_por_corte", 4.00)),
+                        step=0.50,
+                        help="Cobrança exata por passada da serra Tecmatic FIT 2.9 (informado pelo funcionário da loja)."
+                    )
+                else:
+                    preco_corte_val = st.number_input(
+                        "Taxa Fixa de Corte por Chapa (R$ / chapa)",
+                        value=float(config_loja.get("preco_corte_por_chapa", 35.00)),
+                        step=5.00
+                    )
+
+            col_serv2, col_serv3 = st.columns(2)
             with col_serv2:
                 preco_fita = st.number_input(
-                    "Preço da Fita de Borda Aplicada (R$ por metro)",
-                    value=float(config_loja.get("preco_fita_metro", 1.50)),
-                    step=0.25
+                    "Preço da Fita de Borda 0.40mm Aplicada (R$ por metro)",
+                    value=float(config_loja.get("preco_fita_metro", 4.00)),
+                    step=0.50,
+                    help="Valor de R$ 4,00/m linear aplicado na coladeira de borda da loja."
                 )
             with col_serv3:
                 preco_frete = st.number_input(
-                    "Taxa de Frete Padrão do Motorista (R$)",
-                    value=float(config_loja.get("frete_motorista_padrao", 50.0)),
-                    step=10.0
+                    "Taxa de Frete Padrão do Motorista (R$ - Embu e Região)",
+                    value=float(config_loja.get("frete_motorista_padrao", 30.00)),
+                    step=5.00,
+                    help="Valor de R$ 30,00 informado pelo funcionário para fretes locais."
                 )
 
             if st.button("💾 Salvar Alterações de Preços", type="primary"):
                 novos_precos = {row["Material / Espessura"]: float(row["Preço Chapa (R$)"]) for _, row in edited_precos_df.iterrows()}
                 config_loja["precos_mdf_chapa"] = novos_precos
-                config_loja["preco_corte_por_chapa"] = preco_corte
+                config_loja["modo_cobranca_corte"] = "por_corte" if "por Corte" in modo_corte_sel else "por_chapa"
+                if "por Corte" in modo_corte_sel:
+                    config_loja["preco_por_corte"] = preco_corte_val
+                else:
+                    config_loja["preco_corte_por_chapa"] = preco_corte_val
                 config_loja["preco_fita_metro"] = preco_fita
                 config_loja["frete_motorista_padrao"] = preco_frete
                 salvar_config(config_loja)
-                st.success("Tabela de preços atualizada com sucesso!")
+                st.success("Tabela de preços e parâmetros de serviço atualizados com sucesso!")
 
         with tab_adm_loja:
             st.markdown("#### 📱 Configurações de Recebimento e Atendimento")
@@ -869,7 +907,8 @@ if btn_calcular:
                         pieces_list, W, H, kerf_int,
                         K=k_min,
                         allow_rotation=permite_rotacao,
-                        time_limit=6.0
+                        time_limit=6.0,
+                        orientacao="horizontal"
                     )
                     if ch_calc:
                         resultado_chapas = ch_calc
@@ -880,7 +919,8 @@ if btn_calcular:
                             pieces_list, W, H, kerf_int,
                             K=K_tentativa,
                             allow_rotation=permite_rotacao,
-                            time_limit=3.0 if K_tentativa < k_alvo_max else 6.0
+                            time_limit=3.0 if K_tentativa < k_alvo_max else 6.0,
+                            orientacao="horizontal"
                         )
                         if ch_calc:
                             resultado_chapas = ch_calc
@@ -909,10 +949,15 @@ if btn_calcular:
                     # Telemetria: Registra a simulação de corte para o administrador
                     try:
                         mat_nome_log = st.session_state.material_selecionado
-                        preco_unit_ch_log = float(config_loja.get("precos_mdf_chapa", {}).get(mat_nome_log, 230.0))
-                        taxa_corte_log = float(config_loja.get("preco_corte_por_chapa", 35.0))
-                        taxa_fita_log = float(config_loja.get("preco_fita_metro", 1.50))
-                        v_tot_log = (preco_unit_ch_log + taxa_corte_log) * len(resultado_chapas) + (taxa_fita_log * fita_metros_total)
+                        preco_unit_ch_log = float(config_loja.get("precos_mdf_chapa", {}).get(mat_nome_log, 238.0))
+                        modo_corte_log = config_loja.get("modo_cobranca_corte", "por_corte")
+                        if modo_corte_log == "por_corte":
+                            cortes_cont = sum(len(sequencia_cortes(ch.get("faixas", []), W, H, kerf_int, int(round(refilo)), int(round(refilo)))) for ch in resultado_chapas)
+                            v_corte_log = cortes_cont * float(config_loja.get("preco_por_corte", 4.0))
+                        else:
+                            v_corte_log = float(config_loja.get("preco_corte_por_chapa", 35.0)) * len(resultado_chapas)
+                        taxa_fita_log = float(config_loja.get("preco_fita_metro", 4.0))
+                        v_tot_log = (preco_unit_ch_log * len(resultado_chapas)) + v_corte_log + (taxa_fita_log * fita_metros_total)
                         area_nom_tot = len(resultado_chapas) * chapa_w * chapa_h
                         aprov_pct_num = (sum(sum(p['w'] * p['h'] for p in ch['pecas']) for ch in resultado_chapas) / area_nom_tot * 100) if area_nom_tot > 0 else 0.0
 
@@ -1110,32 +1155,53 @@ with tab_checkout:
             total_pcs = int(pecas_atuais["quantidade"].sum())
             area_m2 = sum(float(r["comprimento_mm"]) * float(r["largura_mm"]) * float(r["quantidade"]) for _, r in pecas_atuais.iterrows()) / 1_000_000
             mat_escolhido = st.session_state.material_selecionado
-            preco_chapa = float(config_loja.get("precos_mdf_chapa", {}).get(mat_escolhido, 250.0))
+            preco_chapa = float(config_loja.get("precos_mdf_chapa", {}).get(mat_escolhido, 238.0))
             chapa_area = (chapa_w * chapa_h) / 1_000_000
             chapas_est = max(1, int(math.ceil(area_m2 / (chapa_area * 0.85))))
+            if config_loja.get("modo_cobranca_corte", "por_corte") == "por_corte":
+                est_corte = chapas_est * 8 * float(config_loja.get("preco_por_corte", 4.0))
+            else:
+                est_corte = chapas_est * float(config_loja.get("preco_corte_por_chapa", 35.0))
 
             st.write(f"• **Material Selecionado:** {mat_escolhido}")
             st.write(f"• **Total de Peças:** {total_pcs} peças ({area_m2:.2f} m² de corte)")
             st.write(f"• **Estimativa de Chapas:** ~{chapas_est} chapa(s) de MDF")
-            st.write(f"• **Valor Estimado:** ~R$ {(chapas_est * preco_chapa + chapas_est * float(config_loja.get('preco_corte_por_chapa', 35.0))):.2f}")
+            st.write(f"• **Valor Estimado:** ~R$ {(chapas_est * preco_chapa + est_corte):.2f}")
 
         st.info("💡 Vá na **Aba 1 (📋 Pedido & Peças)** e clique em **🚀 OTIMIZAR CORTE & GERAR ORÇAMENTO** para liberar o QR Code Pix e o botão oficial do WhatsApp.")
     else:
         st.markdown("### 💳 Orçamento & Fechamento de Pedido")
         st.caption("Pague no Pix sem taxas e envie o pedido diretamente para a serra da Embu Ferragens:")
 
+        # Pré-calcula a sequência de corte para precificar por passada de lâmina ou por chapa
+        cortes_todas_chapas = []
+        for ch_idx, ch in enumerate(res["chapas"]):
+            cortes_ch = sequencia_cortes(ch.get("faixas", []), res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
+            cortes_todas_chapas.append((ch_idx + 1, ch, cortes_ch))
+        total_cortes_serra = sum(len(c[2]) for c in cortes_todas_chapas)
+
         # 1. Cálculos de Valores
         mat_nome = res["material"]
-        preco_unit_chapa = float(config_loja.get("precos_mdf_chapa", {}).get(mat_nome, 250.0))
+        preco_unit_chapa = float(config_loja.get("precos_mdf_chapa", {}).get(mat_nome, 238.0))
         qtd_chapas = len(res["chapas"])
         valor_mdf_total = preco_unit_chapa * qtd_chapas
 
-        taxa_corte_unit = float(config_loja.get("preco_corte_por_chapa", 35.0))
-        valor_corte_total = taxa_corte_unit * qtd_chapas
+        modo_corte = config_loja.get("modo_cobranca_corte", "por_corte")
+        if modo_corte == "por_corte":
+            preco_corte_unit = float(config_loja.get("preco_por_corte", 4.0))
+            valor_corte_total = total_cortes_serra * preco_corte_unit
+            label_corte_resumo = f"🪚 Corte Tecmatic FIT 2.9 ({total_cortes_serra} cortes a R$ {preco_corte_unit:.2f}):"
+            texto_corte_zap = f"• Serviço de Corte ({total_cortes_serra} cortes na Tecmatic x R$ {preco_corte_unit:.2f}): R$ {valor_corte_total:.2f}"
+        else:
+            taxa_corte_unit = float(config_loja.get("preco_corte_por_chapa", 35.0))
+            valor_corte_total = taxa_corte_unit * qtd_chapas
+            label_corte_resumo = f"🪚 Corte Seccionadora ({qtd_chapas} chapa(s) a R$ {taxa_corte_unit:.2f}):"
+            texto_corte_zap = f"• Serviço de Corte ({qtd_chapas} chapa(s)): R$ {valor_corte_total:.2f}"
 
-        taxa_fita_metro = float(config_loja.get("preco_fita_metro", 1.50))
+        taxa_fita_metro = float(config_loja.get("preco_fita_metro", 4.00))
         fita_metros = res["fita_metros"]
         valor_fita_total = taxa_fita_metro * fita_metros
+        frete_padrao = float(config_loja.get("frete_motorista_padrao", 30.0))
 
         col_orc1, col_orc2 = st.columns([1, 1])
 
@@ -1146,7 +1212,7 @@ with tab_checkout:
                 "Como deseja receber seu MDF cortado?",
                 [
                     "🏪 Retirar no Balcão da Loja (Embu das Artes - R$ 0,00)",
-                    f"🚚 Entrega pelo Motorista da Loja (+ R$ {config_loja.get('frete_motorista_padrao', 50.0):.2f})"
+                    f"🚚 Entrega pelo Motorista da Loja (+ R$ {frete_padrao:.2f} - Embu e Região)"
                 ]
             )
 
@@ -1154,7 +1220,7 @@ with tab_checkout:
             valor_frete = 0.0
 
             if "Entrega pelo Motorista" in opcao_logistica:
-                valor_frete = float(config_loja.get("frete_motorista_padrao", 50.0))
+                valor_frete = frete_padrao
                 endereco_entrega = st.text_area("Endereço completo da obra ou marcenaria:", placeholder="Rua, número, bairro e cidade...")
 
             valor_final_pedido = valor_mdf_total + valor_corte_total + valor_fita_total + valor_frete
@@ -1170,11 +1236,11 @@ with tab_checkout:
 <b>R$ {valor_mdf_total:.2f}</b>
 </div>
 <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.95rem;">
-<span>🪚 Corte Seccionadora ({qtd_chapas} chapa):</span>
+<span>{label_corte_resumo}</span>
 <b>R$ {valor_corte_total:.2f}</b>
 </div>
 <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.95rem;">
-<span>📏 Fita de Borda ({fita_metros:.1f} m):</span>
+<span>📏 Fita 0.40mm ({fita_metros:.1f} m a R$ {taxa_fita_metro:.2f}/m):</span>
 <b>R$ {valor_fita_total:.2f}</b>
 </div>
 {frete_linha}
@@ -1226,11 +1292,6 @@ with tab_checkout:
         # ----------------------------------------------------
         # 2. SEÇÃO DE IMAGENS DO PLANO DE CORTE PARA WHATSAPP
         # ----------------------------------------------------
-        cortes_todas_chapas = []
-        for ch_idx, ch in enumerate(res["chapas"]):
-            cortes_ch = sequencia_cortes(ch.get("faixas", []), res["W"], res["H"], res["kerf"], res["refilo"], res["refilo"])
-            cortes_todas_chapas.append((ch_idx + 1, ch, cortes_ch))
-
         bloqueado_motor = config_loja.get("proteger_motor_antes_whatsapp", True) and not st.session_state.get("mapa_liberado", False) and not st.session_state.get("is_admin", False)
 
         st.markdown("---")
@@ -1337,11 +1398,11 @@ with tab_checkout:
             f"🧩 *Total de Peças:* {res['total_pecas']} peças cortadas\n"
             f"🚚 *Logística:* {logistica_txt}\n\n"
             f"📐 *MEDIDAS DAS PEÇAS:*\n{texto_pecas}\n\n"
-            f"🪚 *ORDEM DE CORTE (SECCIONADORA):*\n{texto_cortes}\n\n"
+            f"🪚 *ORDEM DE CORTE (SECCIONADORA TECMATIC FIT 2.9):*\n{texto_cortes}\n\n"
             f"💰 *VALORES:*\n"
-            f"• MDF ({qtd_chapas}x): R$ {valor_mdf_total:.2f}\n"
-            f"• Serviço de Corte: R$ {valor_corte_total:.2f}\n"
-            f"• Fita de Borda: R$ {valor_fita_total:.2f}\n"
+            f"• MDF ({qtd_chapas}x {mat_nome}): R$ {valor_mdf_total:.2f}\n"
+            f"{texto_corte_zap}\n"
+            f"• Fita de Borda 0.40mm ({fita_metros:.1f} m): R$ {valor_fita_total:.2f}\n"
             f"• Frete: R$ {valor_frete:.2f}\n"
             f"*TOTAL A PAGAR: R$ {valor_final_pedido:.2f}*\n\n"
             f"{status_comp_zap}\n\n"
@@ -1479,26 +1540,26 @@ with tab_sobre:
         <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 18px; margin-bottom: 16px;">
             <div style="margin-bottom: 14px;">
                 <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
-                    ✂️ Corte Computadorizado na Seccionadora
+                    ✂️ Corte Industrial na Seccionadora Tecmatic FIT 2.9
                 </div>
                 <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
-                    Cortes precisos no esquadro exato, sem lascas no revestimento e com otimização que aproveita ao máximo cada centímetro da chapa.
+                    Cortes perfeitos no esquadro exato com lâmina industrial de 4.0mm e riscador, sem lascas no revestimento e tiras ao longo dos 2,75m.
                 </div>
             </div>
             <div style="margin-bottom: 14px;">
                 <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
-                    📏 Filetagem & Colagem de Fita de Borda
+                    📏 Filetagem & Colagem de Fita de Borda 0.40mm
                 </div>
                 <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
-                    Colagem térmica profissional nas bordas, garantindo proteção contra umidade e estética impecável nos seus móveis.
+                    Colagem térmica profissional Hot-Melt com fita de 0.40mm Branco TX, garantindo proteção contra umidade e acabamento refinado.
                 </div>
             </div>
             <div style="margin-bottom: 14px;">
                 <div style="color: #38bdf8; font-weight: 700; font-size: 0.98rem; margin-bottom: 3px;">
-                    🪵 Estoque de MDF, Compensados & Madeiras
+                    🪵 Estoque de MDF Branco TX (6mm, 15mm e 18mm)
                 </div>
                 <div style="color: #94a3b8; font-size: 0.86rem; line-height: 1.5;">
-                    Branco TX, Madeirados nobres (Carvalho, Freijó, Nogal), Preto e Grafite em espessuras de 6mm, 15mm e 18mm.
+                    Chapas padrão Brasil de 2750 x 1850 mm em estoque pronta-entrega (15mm e 18mm para estruturas e portas; 6mm para fundos).
                 </div>
             </div>
             <div>
