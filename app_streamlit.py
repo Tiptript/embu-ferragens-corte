@@ -46,10 +46,47 @@ st.markdown("""
     [data-testid="stStatusWidget"] {visibility: hidden !important; display: none !important;}
     .stDeployButton {display: none !important;}
 
-    /* Reset de espaçamento superior do Streamlit */
-    .block-container {
+    /* ========================================================= */
+    /* LARGURA TOTAL NO DESKTOP (FULL-WIDTH 100% SEM ESPAÇOS VAZIOS) */
+    /* ========================================================= */
+    html, body, [data-testid="stAppViewContainer"], .main, section.main, .stApp {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Remove limites fixos de max-width (1140px/1200px) e garante preenchimento de 20px */
+    .block-container,
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stAppViewBlockContainer"],
+    div[data-testid="stMain"],
+    .main .block-container {
+        width: 100% !important;
+        max-width: 100% !important;
         padding-top: 0.8rem !important;
         padding-bottom: 2rem !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Expande contêineres e blocos verticais */
+    [data-testid="stVerticalBlock"],
+    [data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stHorizontalBlock"] {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Dataframe e editores de tabela ocupam toda a largura */
+    div[data-testid="stDataFrame"],
+    div[data-testid="stDataEditor"] {
+        width: 100% !important;
+        max-width: 100% !important;
     }
     
     /* Topbar Comercial */
