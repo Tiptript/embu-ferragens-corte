@@ -24,5 +24,5 @@ ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 
 EXPOSE 8501
 
-# Comando de inicialização do app comercial da Embu Ferragens
-CMD ["streamlit", "run", "app_streamlit.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["sh", "-c", "streamlit run app_streamlit.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.enableCORS=false --server.enableXsrfProtection=false"]
+
