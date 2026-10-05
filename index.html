@@ -6,11 +6,114 @@
     <title>Embu Ferragens e Madeiras - Otimizador de Corte</title>
     <style>
         * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0f172a; }
-        iframe { width: 100vw; height: 100vh; border: none; display: block; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: #ffffff;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .logo-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            color: #f8fafc;
+        }
+        .sub-title {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+        .wake-action {
+            display: none;
+            margin-top: 15px;
+            background: #2563eb;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .wake-action:hover {
+            background: #1d4ed8;
+        }
+        iframe {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            display: block;
+        }
     </style>
 </head>
 <body>
-    <iframe src="https://embu-ferragens-corte-9y3oqppzkj6auebkbufwbt.streamlit.app/?embed=true" allow="fullscreen" loading="eager"></iframe>
+    <div id="loader">
+        <div class="spinner"></div>
+        <div class="logo-title">🪵 Embu Ferragens & Madeiras</div>
+        <div class="sub-title">Carregando sistema inteligente de planos de corte...</div>
+        <a id="wakeBtn" class="wake-action" href="https://embu-ferragens-corte-9y3oqppzkj6auebkbufwbt.streamlit.app/" target="_blank">
+            Abrir Conexão Direta
+        </a>
+    </div>
+
+    <iframe 
+        id="appFrame"
+        src="https://embu-ferragens-corte-9y3oqppzkj6auebkbufwbt.streamlit.app/?embed=true" 
+        allow="fullscreen; clipboard-write; camera" 
+        loading="eager"
+        onload="hideLoader()">
+    </iframe>
+
+    <script>
+        function hideLoader() {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 500);
+            }
+        }
+
+        // Se demorar mais de 10 segundos para carregar (ex: servidor acordando), exibe botão de auxílio
+        setTimeout(() => {
+            const btn = document.getElementById('wakeBtn');
+            if (btn && document.getElementById('loader').style.display !== 'none') {
+                btn.style.display = 'inline-block';
+            }
+        }, 10000);
+    </script>
 </body>
 </html>
